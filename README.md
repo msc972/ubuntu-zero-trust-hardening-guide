@@ -554,6 +554,7 @@ sudo ufw allow out on wlp1234 to any port 10001 proto udp
 Replace `ifvpn0` with your VPN tunnel interface (`ip a | grep -E "tun|wg|vpn"`):
 
 ```bash
+sudo ufw allow out on ifvpn0 to any port 22 proto tcp
 sudo ufw allow out on ifvpn0 to any port 53 proto udp
 sudo ufw allow out on ifvpn0 to any port 53 proto tcp
 sudo ufw allow out on ifvpn0 to any port 80 proto tcp
