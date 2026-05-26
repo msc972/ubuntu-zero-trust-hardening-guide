@@ -510,11 +510,8 @@ sudo systemctl restart NetworkManager
 ## Step 9: UFW Firewall (Zero Trust, Deny by Default)
 
 ### Disable IPv6 in UFW
-
-Edit `/etc/default/ufw`:
-
 ```
-IPV6=no
+echo 'IPV6=no' | sudo tee -a /etc/ufw/ufw.conf
 ```
 
 ### Setup
@@ -523,47 +520,67 @@ IPV6=no
 sudo ufw reset
 sudo ufw default deny incoming
 sudo ufw default deny outgoing
+sudo ufw default deny routed
 ```
 
-### WiFi Interface — VPN Bootstrap Only
-
-Replace `wlp1234` with your WiFi interface (`ip link show`):
+### Block Google Analytics IP range — inbound
 
 ```bash
-sudo ufw allow out on wlp1234 to 9.9.9.9 port 53 proto udp
-sudo ufw allow out on wlp1234 to 1.1.1.1 port 53 proto udp
-sudo ufw allow out on wlp1234 to 1.0.0.1 port 53 proto udp
-sudo ufw allow out on wlp1234 to any port 123 proto udp
-sudo ufw allow out on wlp1234 to any port 443 proto udp
-sudo ufw allow out on wlp1234 to any port 8443 proto tcp
-sudo ufw allow out on wlp1234 to any port 10001 proto udp
+sudo ufw insert 1 deny in on wlp1234 from 34.107.0.0/16    # Block GA on WiFi
+sudo ufw insert 2 deny in on ifvpn0 from 34.107.0.0/16     # Block GA on VPN
 ```
-
-| Port | Proto | Destination | Purpose |
-|------|-------|-------------|---------|
-| 53 | udp | Quad9/Cloudflare | DNS bootstrap |
-| 123 | udp | Anywhere | NTP time sync |
-| 443 | udp | Anywhere | WireGuard alt handshake |
-| 8443 | tcp | Anywhere | VPN API auth |
-| 10001 | udp | Anywhere | WireGuard primary handshake |
-
-> **Note:** WireGuard ports vary by VPN provider. Connect the VPN and check `sudo dmesg | grep -i ufw` to identify blocked ports, then add rules accordingly.
+ 
+### Block Google Analytics IP range — outbound
+```bash
+sudo ufw insert 3 deny out on wlp1234 to 34.107.0.0/16      # Block GA on WiFi
+sudo ufw insert 4 deny out on ifvpn0 to 34.107.0.0/16       # Block GA on VPN
+```
 
 ### VPN Tunnel Interface — Internet Traffic
 
 Replace `ifvpn0` with your VPN tunnel interface (`ip a | grep -E "tun|wg|vpn"`):
 
 ```bash
-sudo ufw allow out on ifvpn0 to any port 22 proto tcp
-sudo ufw allow out on ifvpn0 to any port 53 proto udp
-sudo ufw allow out on ifvpn0 to any port 53 proto tcp
-sudo ufw allow out on ifvpn0 to any port 80 proto tcp
-sudo ufw allow out on ifvpn0 to any port 443 proto tcp
-sudo ufw allow out on ifvpn0 to any port 443 proto udp
-sudo ufw allow out on ifvpn0 to any port 465 proto tcp
-sudo ufw allow out on ifvpn0 to any port 993 proto tcp
-sudo ufw allow out on ifvpn0 to any port 8443 proto tcp
-sudo ufw allow out on ifvpn0 to any port 65432 proto tcp
+# DNS
+sudo ufw allow out on ifvpn0 to any port 53 proto udp       # DNS lookups (UDP)
+sudo ufw allow out on ifvpn0 to any port 53 proto tcp        # DNS lookups (TCP, zone transfers)
+ 
+# Web browsing
+sudo ufw allow out on ifvpn0 to any port 80 proto tcp        # HTTP
+sudo ufw allow out on ifvpn0 to any port 443 proto tcp       # HTTPS
+sudo ufw allow out on ifvpn0 to any port 443 proto udp       # QUIC / HTTP3
+ 
+# Email
+sudo ufw allow out on ifvpn0 to any port 993 proto tcp       # IMAP over SSL (mail fetch)
+sudo ufw allow out on ifvpn0 to any port 465 proto tcp       # SMTPS (mail send)
+ 
+# SSH
+sudo ufw allow out on ifvpn0 to any port 22 proto tcp        # SSH
+ 
+# VPN internal control channel
+sudo ufw allow out on ifvpn0 to any port 65432 proto tcp     # VPN app <-> gateway
+ 
+# Alternate HTTPS
+sudo ufw allow out on ifvpn0 to any port 8443 proto tcp      # Alt HTTPS (VPN/services)
+ 
+# NTP
+sudo ufw allow out on ifvpn0 to any port 123 proto udp       # Time sync through VPN
+ 
+# Steam
+sudo ufw allow out on ifvpn0 to any port 27000:27050 proto udp  # Steam game traffic
+ 
+# Blizzard / Battle.net
+sudo ufw allow out on ifvpn0 to any port 1119 proto tcp      # Battle.net login
+sudo ufw allow out on ifvpn0 to any port 1119 proto udp      # Battle.net login
+sudo ufw allow out on ifvpn0 to any port 1120 proto tcp      # Battle.net login (alt)
+sudo ufw allow out on ifvpn0 to any port 1120 proto udp      # Battle.net login (alt)
+sudo ufw allow out on ifvpn0 to any port 3724 proto tcp      # WoW / Battle.net game
+sudo ufw allow out on ifvpn0 to any port 3724 proto udp      # WoW / Battle.net game
+sudo ufw allow out on ifvpn0 to any port 6012 proto tcp      # Battle.net voice/game
+sudo ufw allow out on ifvpn0 to any port 6012 proto udp      # Battle.net voice/game
+ 
+# Project Gorgon
+sudo ufw allow out on ifvpn0 to 64.187.238.75 port 9002 proto tcp
 ```
 
 | Port | Proto | Purpose |
@@ -579,8 +596,60 @@ sudo ufw allow out on ifvpn0 to any port 65432 proto tcp
 
 > **Note:** Ports 8443 and 65432 may be specific to certain VPN providers. Adjust based on `sudo dmesg | grep -i ufw` output.
 
+### WiFi Interface — VPN Bootstrap Only
+
+Replace `wlp1234` with your WiFi interface (`ip link show`):
+
+```bash
+# VPN tunnel establishment
+sudo ufw allow out on wlp1234 to any port 443 proto udp      # WireGuard (Proton VPN tunnel)
+ 
+# Alternate HTTPS (VPN setup)
+sudo ufw allow out on wlp1234 to any port 8443 proto tcp      # Alt HTTPS (Proton/Ubiquiti)
+ 
+# Ubiquiti network management
+sudo ufw allow out on wlp1234 to any port 10001 proto udp     # UniFi device discovery
+ 
+# Fallback DNS (before VPN is up)
+sudo ufw allow out on wlp1234 to 9.9.9.9 port 53 proto udp   # Quad9 DNS
+sudo ufw allow out on wlp1234 to 1.1.1.2 port 53 proto udp   # Cloudflare Privacy DNS primary
+sudo ufw allow out on wlp1234 to 1.0.0.2 port 53 proto udp   # Cloudflare Privacy DNS secondary
+sudo ufw allow out on wlp1234 to 1.1.1.1 port 53 proto udp   # Cloudflare DNS primary as fallback
+sudo ufw allow out on wlp1234 to 1.0.0.1 port 53 proto udp   # Cloudflare DNS secondary as fallback 
+# NTP (before VPN is up)
+sudo ufw allow out on wlp1234 to any port 123 proto udp       # Time sync
+ 
+# Router admin
+sudo ufw allow out on wlp1234 to 192.168.0.1 port 80 proto tcp  # Router web interface
+```
+
+| Port | Proto | Destination | Purpose |
+|------|-------|-------------|---------|
+| 53 | udp | Quad9/Cloudflare | DNS bootstrap |
+| 123 | udp | Anywhere | NTP time sync |
+| 443 | udp | Anywhere | WireGuard alt handshake |
+| 8443 | tcp | Anywhere | VPN API auth |
+| 10001 | udp | Anywhere | WireGuard primary handshake |
+
+> **Note:** WireGuard ports vary by VPN provider. Connect the VPN and check `sudo dmesg | grep -i ufw` to identify blocked ports, then add rules accordingly.
+
+### Enable UFW firewall now
 ```bash
 sudo ufw enable
+```
+
+## Also block analytics/tracking domains in hosts file
+ 
+```bash
+sudo vim /etc/hosts
+# Add these lines:
+0.0.0.0 safebrowsing.google.com
+0.0.0.0 www.google-analytics.com
+0.0.0.0 google-analytics.com
+0.0.0.0 ssl.google-analytics.com
+0.0.0.0 analytics.google.com
+0.0.0.0 www.googletagmanager.com
+0.0.0.0 googletagmanager.com
 ```
 
 ### Enable built-in Kill Switch if available
