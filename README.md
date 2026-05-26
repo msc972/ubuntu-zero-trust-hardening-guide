@@ -476,10 +476,13 @@ echo "Hidden=true" >> ~/.config/autostart/org.kde.discover.notifier.desktop
 ```ini
 [Resolve]
 DNS=9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net
-FallbackDNS=1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com
+FallbackDNS=1.1.1.2#security.cloudflare-dns.com 1.0.0.2#security.cloudflare-dns.com
 DNSOverTLS=opportunistic
 DNSSEC=yes
 Cache=no-negative
+MulticastDNS=no
+LLMNR=no
+ReadEtcHosts=yes
 ```
 
 `DNSOverTLS=opportunistic` uses TLS when available, falls back when not. Quad9 supports DoT so bootstrap DNS is encrypted. The VPN's DNS may not support DoT, but `opportunistic` falls back silently and traffic is already inside the WireGuard tunnel. Check Cloudflare for Malware filtered DNS 1.1.1.2 at https://one.one.one.one/family/
