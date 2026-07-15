@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ubuntu Zero-Trust Hardening – Reference Architecture</title>
+<style>
+  :root{
+    --ink:#232321; --muted:#6b6a64; --faint:#9a998f;
+    --paper:#f6f4ee; --card:#ffffff; --line:#e2ded3;
+    --hard:#0F6E56; --hard-bg:#E1F5EE; --hard-br:#BFE6D7;   /* Hardened  teal   */
+    --para:#B4531A; --para-bg:#FBEBDD; --para-br:#F0CBAE;   /* Paranoid  orange */
+    --egr:#185FA5;  --egr-bg:#E6F1FB;  --egr-br:#C3DCF3;    /* Egress    blue   */
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+       -webkit-font-smoothing:antialiased;padding:30px 26px 40px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+  h1{font-size:22px;font-weight:600;margin:0 0 5px;letter-spacing:.2px}
+  .sub{font-size:13px;color:var(--muted);margin:0 0 20px;max-width:1000px;line-height:1.55}
+  .sub b{color:var(--ink);font-weight:600}
+
+  .layers{display:flex;flex-direction:column;gap:10px}
+  .layer{display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:stretch;
+         background:var(--card);border:1px solid var(--line);border-radius:12px;
+         padding:12px 14px;box-shadow:0 1px 2px rgba(40,36,25,.04)}
+  .lbl{display:flex;flex-direction:column;gap:3px;border-right:1px solid var(--line);padding-right:12px}
+  .lno{font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint)}
+  .lname{font-size:15px;font-weight:600;color:var(--ink)}
+  .lrole{font-size:11px;color:var(--muted);line-height:1.4}
+  .tools{display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start}
+  .chip{font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:8px;
+        border:1px solid var(--hard-br);background:var(--hard-bg);color:var(--hard);white-space:nowrap}
+  .chip.para{border-color:var(--para-br);background:var(--para-bg);color:var(--para)}
+  .chip .p{font-size:8.5px;font-weight:800;letter-spacing:.4px;vertical-align:middle;
+           margin-left:5px;padding:1px 5px;border-radius:20px;background:var(--para);color:#fff}
+
+  .band{margin-top:12px;background:var(--card);border:1px solid var(--egr-br);border-radius:12px;padding:13px 16px}
+  .band.mon{border-color:var(--line)}
+  .band .bhd{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .flow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .fchip{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;border:1px solid var(--egr-br);background:var(--egr-bg);color:var(--egr);white-space:nowrap}
+  .fchip.n{border-color:var(--line);background:#faf9f5;color:var(--ink)}
+  .fchip.net{border-color:var(--line);background:#f1efe8;color:var(--muted)}
+  .arr{color:var(--faint);font-weight:800;font-size:14px}
+  .flow2{margin-top:9px}
+  .fnote{font-size:11.5px;color:var(--muted);margin:9px 0 0;line-height:1.5}
+  .fnote b{color:var(--ink);font-weight:600}
+
+  .legend{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px 22px;font-size:12px;color:var(--muted);align-items:center}
+  .legend .g{display:flex;align-items:center;gap:7px}
+  .sw{width:22px;height:13px;border-radius:4px;border:1px solid}
+  .sw.hard{background:var(--hard-bg);border-color:var(--hard-br)}
+  .sw.para{background:var(--para-bg);border-color:var(--para-br)}
+  .sw.egr{background:var(--egr-bg);border-color:var(--egr-br)}
+  .note{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.6;max-width:1040px}
+  .note b{color:var(--ink);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Reference architecture &middot; deny-by-default, hardware to application</div>
+  <h1>Ubuntu Zero-Trust Hardening</h1>
+  <p class="sub">Layers of defence for a Kubuntu / KDE Plasma laptop, ordered from the hardware up to the application. <b>Hardened</b> is the whole stack; <b>Paranoid</b> items (marked) are opt-in extras against strong or physical adversaries. This shows the architecture only: the individual sysctl keys, firewall ports, and browser settings live in the guide. Generic example, not a specific machine.</p>
+
+  <div class="layers">
+
+    <div class="layer">
+      <div class="lbl"><span class="lno">Layer 5</span><span class="lname">Application</span><span class="lrole">Sandbox and least privilege</span></div>
+      <div class="tools">
+        <span class="chip">Flatpak / Bubblewrap sandbox</span>
+        <span class="chip">Flatseal permission stripping</span>
+        <span class="chip">Firefox hardening</span>
+        <span class="chip">uBlock Origin</span>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="lbl"><span class="lno">Layer 4</span><span class="lname">Network egress</span><span class="lrole">Deny by default, encrypted out</span></div>
+      <div class="tools">
+        <span class="chip">OpenSnitch per-app firewall</span>
+        <span class="chip">UFW deny-by-default</span>
+        <span class="chip">WireGuard VPN</span>
+        <span class="chip">Quad9 DoT + DNSSEC</span>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="lbl"><span class="lno">Layer 3</span><span class="lname">Kernel &amp; OS</span><span class="lrole">Reduce and confine attack surface</span></div>
+      <div class="tools">
+        <span class="chip">sysctl hardening</span>
+        <span class="chip">AppArmor (MAC)</span>
+        <span class="chip">Yama ptrace scope</span>
+        <span class="chip">Disabled services</span>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="lbl"><span class="lno">Layer 2</span><span class="lname">Disk &amp; boot</span><span class="lrole">Encrypt at rest, lock the boot chain</span></div>
+      <div class="tools">
+        <span class="chip">LUKS full-disk encryption</span>
+        <span class="chip">GRUB + BIOS passwords</span>
+        <span class="chip">Secure Boot</span>
+        <span class="chip para">NVMe / TCG Opal<span class="p">PARANOID</span></span>
+        <span class="chip para">LUKS 2FA (FIDO2)<span class="p">PARANOID</span></span>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="lbl"><span class="lno">Layer 1</span><span class="lname">Devices &amp; hardware</span><span class="lrole">Block physical and DMA attacks</span></div>
+      <div class="tools">
+        <span class="chip">IOMMU / VT-d (DMA)</span>
+        <span class="chip">Thunderbolt authorization</span>
+        <span class="chip">BIOS mic / camera off</span>
+        <span class="chip para">USBGuard whitelist<span class="p">PARANOID</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="band">
+    <p class="bhd">Zero-trust egress &middot; nothing leaves without an explicit allow</p>
+    <div class="flow">
+      <span class="fchip n">Application</span>
+      <span class="arr">&rarr;</span>
+      <span class="fchip">OpenSnitch <span style="font-weight:500">(per-app allow / deny)</span></span>
+      <span class="arr">&rarr;</span>
+      <span class="fchip">UFW <span style="font-weight:500">(deny by default)</span></span>
+      <span class="arr">&rarr;</span>
+      <span class="fchip">WireGuard tunnel <span style="font-weight:500">(encrypted)</span></span>
+      <span class="arr">&rarr;</span>
+      <span class="fchip net">Internet</span>
+    </div>
+    <div class="flow flow2">
+      <span class="fchip n">DNS</span>
+      <span class="arr">&rarr;</span>
+      <span class="fchip">Quad9 over TLS + DNSSEC <span style="font-weight:500">(before tunnel)</span></span>
+      <span class="arr">&rarr;</span>
+      <span class="fchip">VPN DNS <span style="font-weight:500">(inside tunnel)</span></span>
+    </div>
+    <p class="fnote"><b>Kill switch:</b> if the VPN drops, the tunnel interface disappears and the physical NIC allows only VPN handshake ports, so no application traffic can leak.</p>
+  </div>
+
+  <div class="band mon">
+    <p class="bhd">Cross-cutting &middot; recovery and monitoring</p>
+    <div class="flow">
+      <span class="fchip n">Timeshift snapshots</span>
+      <span class="fchip n">LUKS header backup</span>
+      <span class="fchip n">rkhunter</span>
+      <span class="fchip n">ClamAV</span>
+      <span class="fchip n">PAM faillock</span>
+    </div>
+    <p class="fnote">Assume breach: keep a rollback path and watch for compromise, independent of the layers above.</p>
+  </div>
+
+  <div class="legend">
+    <span class="g"><span class="sw hard"></span> Hardened (default: the whole stack)</span>
+    <span class="g"><span class="sw para"></span> Paranoid (opt-in, marked in the guide)</span>
+    <span class="g"><span class="sw egr"></span> Zero-trust egress flow</span>
+  </div>
+
+  <p class="note"><b>How to read this.</b> Each layer is a place an attacker could gain a foothold, and the tools on that layer deny it by default. The strength is the stack, not any single control: encryption survives a stolen drive, the firewall and VPN blind the network, the sandbox and MAC contain a compromised app, and snapshots plus scanners assume something may already be wrong. Grounded in zero-trust principles (NIST SP 800-207) applied to one endpoint, not an enterprise network.</p>
+</div>
+</body>
+</html>

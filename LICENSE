@@ -1,0 +1,38 @@
+Copyright (c) 2026 msc972
+
+"Ubuntu Zero-Trust Hardening Guide" (comprising README.md and the accompanying
+reference-architecture diagram, reference-architecture.html and
+reference-architecture.png, in this repository) is licensed under the Creative
+Commons Attribution 4.0 International License (CC BY 4.0).
+
+You are free to:
+  - Share: copy and redistribute the material in any medium or format.
+  - Adapt: remix, transform, and build upon the material for any purpose,
+           including commercially.
+
+Under the following term:
+  - Attribution: You must give appropriate credit, provide a link to the
+    license, and indicate if changes were made. You may do so in any reasonable
+    manner, but not in any way that suggests the licensor endorses you or your use.
+
+No additional restrictions: You may not apply legal terms or technological
+measures that legally restrict others from doing anything the license permits.
+
+Full legal code:        https://creativecommons.org/licenses/by/4.0/legalcode
+Human-readable summary:  https://creativecommons.org/licenses/by/4.0/
+
+------------------------------------------------------------------------------
+
+Author's rights. The author retains copyright in this work. This license grants
+permissions to others; it does NOT limit the author's own rights to reuse,
+adapt, or republish this work (for example, in a later research paper or
+university thesis).
+
+Third-party material. Brief quotations of, and references to, external works
+(cited in README.md) remain the property of their respective owners and are used
+here for commentary, criticism, and citation. This license applies only to the
+author's own original text and to the original reference-architecture diagram;
+it does not relicense any third-party material.
+
+No warranty. This work is provided "as is", for educational purposes, without
+warranty of any kind. See the Disclaimer in README.md.
